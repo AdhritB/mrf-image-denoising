@@ -1,0 +1,26 @@
+# ---- virtual environment ----
+.venv/
+venv/
+env/
+
+# ---- data (large, freely downloadable — see README for URLs) ----
+data/
+
+# ---- generated outputs (regenerable by running the experiments) ----
+results/
+
+# ---- Python bytecode ----
+__pycache__/
+*.py[cod]
+*.pyo
+src/__pycache__/
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ---- video / animation artefacts ----
+*.mp4
+*.gif

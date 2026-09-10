@@ -2,4 +2,5 @@ numpy
 pillow
 matplotlib
 scikit-image
+scipy
 bm3d

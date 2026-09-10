@@ -24,8 +24,20 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib
+import matplotlib as mpl
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+# Figure legibility (supervisor feedback: text must be readable at 100% zoom).
+# Every report figure is included at \textwidth, so the on-page font size is the
+# size below scaled by (text width / figsize width). Figure widths were reduced
+# and font sizes raised together so the rendered text lands near 10 pt.
+mpl.rcParams.update({
+    "font.size": 16, "axes.titlesize": 16, "axes.labelsize": 16,
+    "xtick.labelsize": 14, "ytick.labelsize": 14, "legend.fontsize": 13,
+    "figure.dpi": 200, "savefig.dpi": 200, "savefig.bbox": "tight",
+})
+
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from datasets import load_folder, gaussian_noise, psnr
@@ -120,29 +132,35 @@ print(f"  iterated estimates that DIVERGED (hit bracket edge): "
       f"{n_div}/{len(rows)}")
 
 # figures
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.4))
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.0, 4.6))
 
 # left: learned J vs hand-tuned, per regime
 x = np.arange(len(rows)); w = 0.27
-ax1.bar(x - w, clean_Js, w, label="J from clean", color="#3f9b52")
-ax1.bar(x,      noisy_Js, w, label="J from noisy", color="#3b6fb0")
-ax1.bar(x + w,  iter_final_Js, w, label="J iterated (final)", color="#c0392b")
-ax1.axhline(J_ADOPTED, ls="--", color="black", label=f"hand-tuned J={J_ADOPTED}")
-ax1.set_xticks(x); ax1.set_xticklabels([r["image"] for r in rows], fontsize=7,
+ax1.bar(x - w, clean_Js, w, label="fitted to clean image", color="#3f9b52")
+ax1.bar(x,      noisy_Js, w, label="fitted to noisy image", color="#3b6fb0")
+ax1.bar(x + w,  iter_final_Js, w, label="fitted iteratively (final)",
+        color="#c0392b")
+ax1.axhline(J_ADOPTED, ls="--", color="black",
+            label=f"hand-tuned input J={J_ADOPTED}")
+ax1.set_xticks(x); ax1.set_xticklabels([r["image"] for r in rows], fontsize=11,
                                        rotation=45)
-ax1.set_ylabel("estimated J"); ax1.set_title("Learned vs hand-tuned coupling")
-ax1.legend(fontsize=8)
+ax1.set_xlabel("Set12 image")
+# J is an INPUT everywhere else in this project; here it is fitted from data.
+ax1.set_ylabel("J fitted by max. pseudo-likelihood")
+ax1.set_title("Coupling fitted to data vs hand-tuned input")
+ax1.legend(fontsize=11)
 
 # right: the stability trace (Besag's divergence test) for one image
 name, traj = example_traj
 ax2.plot(range(1, len(traj) + 1), traj, marker="o", color="#c0392b")
 ax2.axhline(J_ADOPTED, ls="--", color="black", label=f"hand-tuned J={J_ADOPTED}")
-ax2.set_xlabel("re-estimation cycle"); ax2.set_ylabel("estimated J")
-ax2.set_title(f"Stability of iterated estimation (image {name})")
-ax2.legend(fontsize=8); ax2.grid(alpha=0.3)
+ax2.set_xlabel("re-estimation cycle")
+ax2.set_ylabel("J fitted by max. pseudo-likelihood")
+ax2.set_title(f"Stability of iterated fitting (image {name})")
+ax2.legend(fontsize=11); ax2.grid(alpha=0.3)
 
-fig.suptitle("Pseudo-likelihood learning of the Potts coupling", fontsize=12)
-fig.tight_layout(rect=[0, 0, 1, 0.94])
-fig.savefig(RESULTS / "exp07_pseudolikelihood.png", dpi=130)
+fig.suptitle("Pseudo-likelihood learning of the Potts coupling", fontsize=15)
+fig.tight_layout(rect=[0, 0, 1, 0.92])
+fig.savefig(RESULTS / "exp07_pseudolikelihood.png")
 
 print("\nsaved -> results/exp07_pseudolikelihood.csv, exp07_pseudolikelihood.png")

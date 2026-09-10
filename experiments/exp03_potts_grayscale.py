@@ -17,8 +17,20 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib
+import matplotlib as mpl
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+# Figure legibility (supervisor feedback: text must be readable at 100% zoom).
+# Every report figure is included at \textwidth, so the on-page font size is the
+# size below scaled by (text width / figsize width). Figure widths were reduced
+# and font sizes raised together so the rendered text lands near 10 pt.
+mpl.rcParams.update({
+    "font.size": 16, "axes.titlesize": 16, "axes.labelsize": 16,
+    "xtick.labelsize": 14, "ytick.labelsize": 14, "legend.fontsize": 13,
+    "figure.dpi": 200, "savefig.dpi": 200, "savefig.bbox": "tight",
+})
+
 from skimage.metrics import structural_similarity as ssim
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -29,7 +41,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "results"; RESULTS.mkdir(exist_ok=True)
 
 Q = 32
-SWEEP_J = [2.0]
+SWEEP_J = [1.0, 1.75, 2.0, 2.5]   # sweep restored: Figures 3.3 and 3.4 need it
 SIGMAS = [15 / 255, 25 / 255]
 N_SET12 = None      # None -> ALL 12 (includes Barbara, the texture-critical image)
 N_BSD = 10          # None -> all 68
@@ -200,7 +212,7 @@ with open(csv_path, "w", newline="") as f:
 
 #PSNR/SSIM vs J (titles from data)
 if len(SWEEP_J) > 1 and "Set12" in datasets:
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.4))
+    fig, axes = plt.subplots(1, 2, figsize=(9.0, 4.6))
     for s in sorted({r["sigma255"] for r in rows if r["dataset"] == "Set12"}):
         sub = sorted([r for r in rows if r["dataset"] == "Set12"
                       and r["sigma255"] == s], key=lambda r: r["J"])
@@ -212,39 +224,42 @@ if len(SWEEP_J) > 1 and "Set12" in datasets:
     if keys:
         # Summarise EACH metric across BOTH sigma conditions rather than borrowing
         # a single curve's shape (a panel shows two sigma lines that can differ).
-        def panel_summary(metric_idx_best, metric_idx_tied):
-            bests = {summary[k][metric_idx_best] for k in keys}
-            tied = None
-            for k in keys:
-                t = summary[k][metric_idx_tied]
-                tied = t if tied is None else (tied | t)
+        def panel_summary(metric_idx_best):
+            """Where each sigma curve peaks, stated per sigma so the title can
+            never contradict the x axis (which always sweeps J)."""
+            per_sigma = {k[1]: summary[k][metric_idx_best]
+                         for k in sorted(keys, key=lambda kk: kk[1])}
+            bests = set(per_sigma.values())
             if len(bests) == 1:
-                return f"best at J={bests.pop()} (both \u03c3)"
-            return f"best J varies with \u03c3 ({', '.join(f'J={b}' for b in sorted(bests))})"
+                return f"peak at J={bests.pop()} for both \u03c3"
+            return "peak at " + ", ".join(
+                f"J={v} (\u03c3={s})" for s, v in per_sigma.items())
 
         # summary tuple: (bp, tp, sp, bs, ts, ss)
-        ptitle = "PSNR: " + panel_summary(0, 1)
-        stitle = "SSIM: " + panel_summary(3, 4)
+        ptitle = "PSNR against coupling J\n" + panel_summary(0)
+        stitle = "SSIM against coupling J\n" + panel_summary(3)
         common = None
         for k in keys:
             adm = summary[k][1] & summary[k][4]
             common = adm if common is None else (common & adm)
         if common:
-            sup = (f"Potts denoiser: PSNR and SSIM both admit J\u2208{sorted(common)} "
-                   f"within tolerance across \u03c3 (q={Q}, Set12)")
+            sup = (f"Potts coupling sweep on Set12 (q={Q}): PSNR and SSIM agree, "
+                   f"both admitting J\u2208{sorted(common)}")
         else:
-            sup = ("Potts denoiser: PSNR and SSIM admit no common J within "
-                   f"tolerance in every condition (q={Q}, Set12)")
+            sup = (f"Potts coupling sweep on Set12 (q={Q}): PSNR and SSIM admit "
+                   f"no common J within tolerance")
     else:
-        ptitle, stitle, sup = "PSNR vs J", "SSIM vs J", f"Potts denoiser (q={Q}, Set12)"
+        ptitle = "PSNR against coupling J"
+        stitle = "SSIM against coupling J"
+        sup = f"Potts coupling sweep on Set12 (q={Q})"
 
     axes[0].set_xlabel("coupling J"); axes[0].set_ylabel("PSNR (dB)")
     axes[0].set_title(ptitle); axes[0].legend(); axes[0].grid(alpha=0.3)
     axes[1].set_xlabel("coupling J"); axes[1].set_ylabel("SSIM")
     axes[1].set_title(stitle); axes[1].legend(); axes[1].grid(alpha=0.3)
-    fig.suptitle(sup, fontsize=12)
-    fig.tight_layout(rect=[0, 0, 1, 0.90])
-    fig.savefig(RESULTS / "exp03_J_sweep.png", dpi=130)
+    fig.suptitle(sup, fontsize=15)
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    fig.savefig(RESULTS / "exp03_J_sweep.png")
 
 # qualitative figure: J comparison on ONE image
 # Only regenerate when actually sweeping: with a single J this figure would be
@@ -262,23 +277,24 @@ if len(SWEEP_J) > 1 and "Set12" in datasets and len(datasets["Set12"]) > 8:
         panels.append((xh, f"J={J}", psnr(img, xh),
                        ssim(img, xh, data_range=1.0)))
     n = len(panels)
-    fig, axes = plt.subplots(1, n, figsize=(3.1 * n, 3.6))
+    fig, axes = plt.subplots(1, n, figsize=(2.05 * n, 4.3))
     for ax, (im, lab, p, sv) in zip(axes, panels):
         ax.imshow(im, cmap="gray", vmin=0, vmax=1)
         ax.set_xticks([]); ax.set_yticks([])
-        ax.set_title(lab if p is None else f"{lab}\n{p:.1f} dB / {sv:.3f}",
-                     fontsize=9)
-    fig.suptitle("Set12 #9 (Barbara), sigma=25 — texture loss as J increases "
-                 "(titles: PSNR / SSIM)", fontsize=12)
+        # Spell the numbers out: the supervisor asked what "24.0 dB / 0.624" meant.
+        ax.set_title(lab if p is None
+                     else f"{lab}\nPSNR {p:.1f} dB\nSSIM {sv:.3f}", fontsize=17)
+    fig.suptitle("Set12 #9 (Barbara), $\\sigma$=25: texture loss as J increases",
+                 fontsize=18)
     fig.tight_layout(rect=[0, 0, 1, 0.90])
-    fig.savefig(RESULTS / "exp03_J_visual_barbara.png", dpi=130)
+    fig.savefig(RESULTS / "exp03_J_visual_barbara.png")
 
 #standard 3-image figure
 if "Set12" in datasets:
     sigma = 25 / 255
     imgs = datasets["Set12"]
     picks = [2, 5, 8] if len(imgs) > 8 else list(range(min(3, len(imgs))))
-    fig, axes = plt.subplots(3, len(picks), figsize=(3.5 * len(picks), 10.5))
+    fig, axes = plt.subplots(3, len(picks), figsize=(2.6 * len(picks), 8.0))
     if len(picks) == 1:
         axes = axes.reshape(3, 1)
     for col, idx in enumerate(picks):
@@ -297,12 +313,12 @@ if "Set12" in datasets:
             ax.imshow(im, cmap="gray", vmin=0, vmax=1)
             ax.set_xticks([]); ax.set_yticks([])
             if col == 0:
-                ax.set_ylabel(label.split(" (")[0], fontsize=12)
-            ax.set_title(label if row else f"Set12 #{idx+1}", fontsize=9)
-    fig.suptitle(f"Potts denoiser (q={Q}, J={J_FIGURE}), Gaussian sigma=25 "
-                 f"— titles show PSNR / SSIM", fontsize=12)
+                ax.set_ylabel(label.split(" (")[0], fontsize=16)
+            ax.set_title(label if row else f"Set12 #{idx+1}", fontsize=13)
+    fig.suptitle(f"Potts denoiser (q={Q}, J={J_FIGURE}), Gaussian $\\sigma$=25; "
+                 f"panel titles show PSNR / SSIM", fontsize=15)
     fig.tight_layout(rect=[0, 0, 1, 0.90])
-    fig.savefig(RESULTS / "exp03_potts_grayscale.png", dpi=130)
+    fig.savefig(RESULTS / "exp03_potts_grayscale.png")
 
 print("\nsaved -> results/exp03_potts_grayscale.{csv,png}"
       + (", exp03_J_sweep.png" if len(SWEEP_J) > 1 else "")

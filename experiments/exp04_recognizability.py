@@ -31,8 +31,20 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib
+import matplotlib as mpl
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+# Figure legibility (supervisor feedback: text must be readable at 100% zoom).
+# Every report figure is included at \textwidth, so the on-page font size is the
+# size below scaled by (text width / figsize width). Figure widths were reduced
+# and font sizes raised together so the rendered text lands near 10 pt.
+mpl.rcParams.update({
+    "font.size": 16, "axes.titlesize": 16, "axes.labelsize": 16,
+    "xtick.labelsize": 14, "ytick.labelsize": 14, "legend.fontsize": 13,
+    "figure.dpi": 200, "savefig.dpi": 200, "savefig.bbox": "tight",
+})
+
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from datasets import load_mnist, binarise, flip_noise, denoising_report
@@ -139,7 +151,7 @@ report_block("mean-field", m_imgs)
 report_block("Loopy BP", l_imgs)
 
 # sweep figure
-fig, ax = plt.subplots(figsize=(7.2, 4.6))
+fig, ax = plt.subplots(figsize=(8.0, 5.0))
 Js = [r["J"] for r in sweep]
 ax.plot(Js, [r["overall"] for r in sweep], marker="o", color="#3b6fb0",
         label="overall pixel accuracy")
@@ -147,16 +159,17 @@ ax.plot(Js, [r["foreground"] for r in sweep], marker="s", color="#e0873a",
         label="foreground accuracy (digit pixels)")
 ax.plot(Js, [r["recognised"] for r in sweep], marker="^", color="#3f9b52",
         label="recognisability (still reads as the digit)")
-ax.axhline(clean_recog, ls="--", color="#3f9b52", alpha=0.5,
-           label=f"clean-digit ceiling ({clean_recog:.0%})")
+ax.axhline(clean_recog, ls="--", color="#3f9b52", alpha=0.7,
+           label=f"clean-digit ceiling: {clean_recog:.0%} "
+                 f"(same reader on undamaged digits)")
 ax.set_xlabel("Ising prior strength J")
 ax.set_ylabel("accuracy")
 ax.set_title(f"As the prior strengthens, pixels stay 'correct' but the digit\n"
              f"stops being readable (Gibbs, p={P_HARD:.0%}, {N_TEST} digits)")
-ax.legend(fontsize=9, loc="center left"); ax.grid(alpha=0.3)
+ax.legend(fontsize=12, loc="center left"); ax.grid(alpha=0.3)
 ax.set_ylim(0, 1.02)
 fig.tight_layout()
-fig.savefig(RESULTS / "exp04_recognisability_sweep.png", dpi=130)
+fig.savefig(RESULTS / "exp04_recognisability_sweep.png")
 
 # error maps 
 # The "complete picture": subtract restored from clean and colour the outcome.
@@ -177,7 +190,7 @@ def error_map(x, xh):
 
 n_show = 6
 g_preds = recognise([g_imgs[c] for c in range(n_show)])
-fig, axes = plt.subplots(3, n_show, figsize=(11, 6.0))
+fig, axes = plt.subplots(3, n_show, figsize=(10.0, 5.8))
 for c in range(n_show):
     x, xh = clean[c], g_imgs[c]
     true_lab = test_labels[c]
@@ -197,15 +210,15 @@ for c in range(n_show):
         else:
             ax.imshow(im, cmap="gray", vmin=-1, vmax=1)
         ax.set_xticks([]); ax.set_yticks([])
-        ax.set_title(title, fontsize=9)
+        ax.set_title(title, fontsize=15)
         if c == 0:
-            ax.set_ylabel(["clean", "restored", "error map"][r], fontsize=11)
+            ax.set_ylabel(["clean", "restored", "error map"][r], fontsize=15)
 fig.suptitle("What the denoiser loses (Gibbs, J=%.1f, p=%d%%).  "
              "Error map: white kept \u00b7 RED erased digit \u00b7 blue spurious ink.\n"
              "A digit that reads high on pixel accuracy but comes back as red is "
-             "erased, not denoised." % (J_FIXED, int(P_HARD * 100)), fontsize=11)
-fig.tight_layout(rect=[0, 0, 1, 0.94])
-fig.savefig(RESULTS / "exp04_error_maps.png", dpi=130)
+             "erased, not denoised." % (J_FIXED, int(P_HARD * 100)), fontsize=14)
+fig.tight_layout(rect=[0, 0, 1, 0.92])
+fig.savefig(RESULTS / "exp04_error_maps.png")
 
 print("\nsaved -> results/exp04_recognisability.csv, "
       "exp04_recognisability_sweep.png, exp04_error_maps.png")

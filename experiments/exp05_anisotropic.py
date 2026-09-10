@@ -31,8 +31,20 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib
+import matplotlib as mpl
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+# Figure legibility (supervisor feedback: text must be readable at 100% zoom).
+# Every report figure is included at \textwidth, so the on-page font size is the
+# size below scaled by (text width / figsize width). Figure widths were reduced
+# and font sizes raised together so the rendered text lands near 10 pt.
+mpl.rcParams.update({
+    "font.size": 16, "axes.titlesize": 16, "axes.labelsize": 16,
+    "xtick.labelsize": 14, "ytick.labelsize": 14, "legend.fontsize": 13,
+    "figure.dpi": 200, "savefig.dpi": 200, "savefig.bbox": "tight",
+})
+
 from skimage.metrics import structural_similarity as ssim
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -143,7 +155,7 @@ else:
     print("  If it still ties, the negative result holds across both estimators.")
 
 # figure
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.4))
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.5, 4.4))
 ks = KAPPAS
 for ax, metric, blabel in [(ax1, "psnr", "PSNR (dB)"), (ax2, "ssim", "SSIM")]:
     pm_y = [next(r[metric] for r in rows if r["mode"] == "perona_malik"
@@ -154,15 +166,15 @@ for ax, metric, blabel in [(ax1, "psnr", "PSNR (dB)"), (ax2, "ssim", "SSIM")]:
     ax.axhline(iso_y, ls="--", color="black", label="isotropic (baseline)")
     ax.plot(ks, pm_y, marker="o", color="#3f9b52", label="Perona-Malik (edge-preserving)")
     ax.plot(ks, co_y, marker="s", color="#c0392b", label="Cohen inverted (ablation)")
-    ax.set_xlabel("kappa (gradient scale)"); ax.set_ylabel(blabel)
-    ax.grid(alpha=0.3); ax.legend(fontsize=8)
-ax1.set_title("Set12 aggregate: does adaptive coupling beat a global J?")
+    ax.set_xlabel("$\\kappa$ (gradient scale)"); ax.set_ylabel(blabel)
+    ax.grid(alpha=0.3); ax.legend(fontsize=12)
+ax1.set_title("Set12 aggregate PSNR")
 ax2.set_title("Set12 aggregate SSIM")
-fig.suptitle(f"Anisotropic vs isotropic Potts coupling (Set12, \u03c3={round(SIGMA*255)}, "
-             f"J0={J_ISO}, estimator={ESTIMATOR.upper()}) \u2014 verdict is data-driven",
-             fontsize=12)
-fig.tight_layout(rect=[0, 0, 1, 0.94])
-fig.savefig(RESULTS / f"exp05_anisotropic_sweep_{ESTIMATOR}.png", dpi=130)
+fig.suptitle(f"Adaptive vs global Potts coupling, {ESTIMATOR.upper()} estimator "
+             f"(Set12, $\\sigma$={round(SIGMA*255)}, $J_0$={J_ISO})",
+             fontsize=15)
+fig.tight_layout(rect=[0, 0, 1, 0.92])
+fig.savefig(RESULTS / f"exp05_anisotropic_sweep_{ESTIMATOR}.png")
 
 print(f"\nsaved -> results/exp05_anisotropic_{ESTIMATOR}.csv, "
       f"exp05_anisotropic_sweep_{ESTIMATOR}.png")

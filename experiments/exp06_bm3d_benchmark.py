@@ -21,8 +21,20 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib
+import matplotlib as mpl
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+# Figure legibility (supervisor feedback: text must be readable at 100% zoom).
+# Every report figure is included at \textwidth, so the on-page font size is the
+# size below scaled by (text width / figsize width). Figure widths were reduced
+# and font sizes raised together so the rendered text lands near 10 pt.
+mpl.rcParams.update({
+    "font.size": 16, "axes.titlesize": 16, "axes.labelsize": 16,
+    "xtick.labelsize": 14, "ytick.labelsize": 14, "legend.fontsize": 13,
+    "figure.dpi": 200, "savefig.dpi": 200, "savefig.bbox": "tight",
+})
+
 from skimage.metrics import structural_similarity as ssim
 
 try:
@@ -102,7 +114,7 @@ with open(RESULTS / "exp06_bm3d_benchmark.csv", "w", newline="") as f:
     w.writeheader(); w.writerows(all_rows)
 
 # figure
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.4))
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.0, 4.4))
 labels = [f"{r['dataset']}\n$\\sigma$={r['sigma255']}" for r in all_rows]
 x = np.arange(len(all_rows)); w = 0.35
 for ax, key_p, key_b, ylab, title in [
@@ -112,13 +124,13 @@ for ax, key_p, key_b, ylab, title in [
            color="#3b6fb0")
     ax.bar(x + w/2, [r[key_b] for r in all_rows], w, label="BM3D",
            color="#e0873a")
-    ax.set_xticks(x); ax.set_xticklabels(labels, fontsize=8)
-    ax.set_ylabel(ylab); ax.set_title(title); ax.legend(fontsize=8)
+    ax.set_xticks(x); ax.set_xticklabels(labels, fontsize=13)
+    ax.set_ylabel(ylab); ax.set_title(title); ax.legend(fontsize=12)
     ax.grid(axis="y", alpha=0.3)
 fig.suptitle("Interpretable Potts MRF vs BM3D on identical noisy images",
-             fontsize=12)
-fig.tight_layout(rect=[0, 0, 1, 0.94])
-fig.savefig(RESULTS / "exp06_bm3d_benchmark.png", dpi=130)
+             fontsize=15)
+fig.tight_layout(rect=[0, 0, 1, 0.92])
+fig.savefig(RESULTS / "exp06_bm3d_benchmark.png")
 
 # verdict
 print("\nVerdict:")
